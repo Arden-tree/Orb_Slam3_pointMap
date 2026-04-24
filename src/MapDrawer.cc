@@ -175,6 +175,21 @@ void MapDrawer::DrawMapPoints()
     glEnd();
 }
 
+void MapDrawer::DrawDensePointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr denseCloud)
+{
+    if (!denseCloud || denseCloud->empty())
+        return;
+
+    glPointSize(2);
+    glBegin(GL_POINTS);
+    for (const auto& p : denseCloud->points)
+    {
+        glColor3ub(p.r, p.g, p.b);
+        glVertex3f(p.x, p.y, p.z);
+    }
+    glEnd();
+}
+
 void MapDrawer::DrawKeyFrames(const bool bDrawKF, const bool bDrawGraph, const bool bDrawInertialGraph, const bool bDrawOptLba)
 {
     const float &w = mKeyFrameSize;

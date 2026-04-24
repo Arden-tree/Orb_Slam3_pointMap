@@ -504,6 +504,10 @@ protected:
 public:
     GeometricCamera* mpCamera, *mpCamera2;
 
+    // RGB-D image cache for point cloud mapping
+    cv::Mat mColorImage;
+    cv::Mat mDepthImage;
+
     //Indexes of stereo observations correspondences
     std::vector<int> mvLeftToRightMatch, mvRightToLeftMatch;
 

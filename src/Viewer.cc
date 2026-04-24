@@ -314,6 +314,9 @@ void Viewer::Run()
             mpMapDrawer->DrawKeyFrames(menuShowKeyFrames,menuShowGraph, menuShowInertialGraph, menuShowOptLba);
         if(menuShowPoints)
             mpMapDrawer->DrawMapPoints();
+        // Dense point cloud (RGB-D mode)
+        if(mpSystem->GetPointCloudMapping())
+            mpMapDrawer->DrawDensePointCloud(mpSystem->GetPointCloudMapping()->getGlobalMap());
 
         pangolin::FinishFrame();
 

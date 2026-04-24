@@ -26,6 +26,9 @@
 #include "Settings.h"
 #include<pangolin/pangolin.h>
 
+#include<pcl/point_types.h>
+#include<pcl/point_cloud.h>
+
 #include<mutex>
 
 namespace ORB_SLAM3
@@ -44,6 +47,7 @@ public:
     Atlas* mpAtlas;
 
     void DrawMapPoints();
+    void DrawDensePointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr denseCloud);
     void DrawKeyFrames(const bool bDrawKF, const bool bDrawGraph, const bool bDrawInertialGraph, const bool bDrawOptLba);
     void DrawCurrentCamera(pangolin::OpenGlMatrix &Twc);
     void SetCurrentCameraPose(const Sophus::SE3f &Tcw);

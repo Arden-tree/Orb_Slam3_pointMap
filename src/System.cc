@@ -225,6 +225,20 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 
     //usleep(10*1000*1000);
 
+    //Initialize point cloud mapping for RGB-D mode
+    mpPointCloudMapping = nullptr;
+    if(mSensor == RGBD || mSensor == IMU_RGBD)
+    {
+        float resolution = 0.04f; // default voxel grid resolution
+        cv::FileNode pcRes = fsSettings["PointCloudMapping.Resolution"];
+        if(!pcRes.empty() && pcRes.isReal())
+            resolution = (float)pcRes;
+        else if(!pcRes.empty() && pcRes.isInt())
+            resolution = (int)pcRes;
+        mpPointCloudMapping = new PointCloudMapping(resolution);
+        cout << "Point cloud mapping initialized with resolution=" << resolution << endl;
+    }
+
     //Initialize the Viewer thread and launch
     if(bUseViewer)
     //if(false) // TODO
@@ -549,6 +563,13 @@ void System::Shutdown()
     {
         Verbose::PrintMess("Atlas saving to file " + mStrSaveAtlasToFile, Verbose::VERBOSITY_NORMAL);
         SaveAtlas(FileType::BINARY_FILE);
+    }
+
+    // Shutdown point cloud mapping
+    if(mpPointCloudMapping)
+    {
+        mpPointCloudMapping->shutdown();
+        cout << "Point cloud mapping shutdown complete." << endl;
     }
 
     /*if(mpViewer)

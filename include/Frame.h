@@ -198,6 +198,10 @@ public:
     // Frame timestamp.
     double mTimeStamp;
 
+    // RGB-D image cache for point cloud mapping
+    cv::Mat mColorImage;
+    cv::Mat mDepthImage;
+
     // Calibration matrix and OpenCV distortion parameters.
     cv::Mat mK;
     Eigen::Matrix3f mK_;

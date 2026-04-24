@@ -39,6 +39,7 @@
 #include "Viewer.h"
 #include "ImuTypes.h"
 #include "Settings.h"
+#include "PointCloudMapping.h"
 
 
 namespace ORB_SLAM3
@@ -186,6 +187,9 @@ public:
 
     float GetImageScale();
 
+    // Get point cloud mapping pointer (for LocalMapping to insert keyframes)
+    PointCloudMapping* GetPointCloudMapping() { return mpPointCloudMapping; }
+
 #ifdef REGISTER_TIMES
     void InsertRectTime(double& time);
     void InsertResizeTime(double& time);
@@ -262,6 +266,9 @@ private:
     string mStrVocabularyFilePath;
 
     Settings* settings_;
+
+    // Point cloud mapping for RGB-D mode
+    PointCloudMapping* mpPointCloudMapping;
 };
 
 }// namespace ORB_SLAM

@@ -23,6 +23,7 @@
 #include "Optimizer.h"
 #include "Converter.h"
 #include "GeometricTools.h"
+#include "System.h"
 
 #include<mutex>
 #include<chrono>
@@ -335,6 +336,13 @@ void LocalMapping::ProcessNewKeyFrame()
 
     // Insert Keyframe in Map
     mpAtlas->AddKeyFrame(mpCurrentKeyFrame);
+
+    // Insert keyframe to point cloud mapping (RGB-D only)
+    PointCloudMapping* pPC = mpSystem->GetPointCloudMapping();
+    if(pPC && !mpCurrentKeyFrame->mColorImage.empty() && !mpCurrentKeyFrame->mDepthImage.empty())
+    {
+        pPC->insertKeyFrame(mpCurrentKeyFrame, mpCurrentKeyFrame->mColorImage, mpCurrentKeyFrame->mDepthImage);
+    }
 }
 
 void LocalMapping::EmptyQueue()
