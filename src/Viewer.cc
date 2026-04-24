@@ -164,7 +164,7 @@ void Viewer::Run()
     mbFinished = false;
     mbStopped = false;
 
-    pangolin::CreateWindowAndBind("ORB-SLAM3: Map Viewer",1024,768);
+    pangolin::CreateWindowAndBind("ORB-SLAM3: Map Viewer",1920,768);
 
     // 3D Mouse handler requires depth testing to be enabled
     glEnable(GL_DEPTH_TEST);
@@ -189,16 +189,31 @@ void Viewer::Run()
     pangolin::Var<bool> menuStep("menu.Step",false,false);
 
     pangolin::Var<bool> menuShowOptLba("menu.Show LBA opt", false, true);
-    // Define Camera Render Object (for view / scene browsing)
+
+    // Two separate 3D cameras
+    // Left: sparse map (original)
     pangolin::OpenGlRenderState s_cam(
                 pangolin::ProjectionMatrix(1024,768,mViewpointF,mViewpointF,512,389,0.1,1000),
                 pangolin::ModelViewLookAt(mViewpointX,mViewpointY,mViewpointZ, 0,0,0,0.0,-1.0, 0.0)
                 );
+    // Right: dense point cloud
+    bool hasDenseCloud = (mpSystem->GetPointCloudMapping() != nullptr);
+    pangolin::OpenGlRenderState s_cam_dense(
+                pangolin::ProjectionMatrix(1024,768,mViewpointF,mViewpointF,512,389,0.1,1000),
+                pangolin::ModelViewLookAt(mViewpointX,mViewpointY,mViewpointZ, 0,0,0,0.0,-1.0, 0.0)
+                );
 
-    // Add named OpenGL viewport to window and provide 3D Handler
+    // Left view: sparse map (menu width to midpoint)
     pangolin::View& d_cam = pangolin::CreateDisplay()
-            .SetBounds(0.0, 1.0, pangolin::Attach::Pix(175), 1.0, -1024.0f/768.0f)
+            .SetBounds(0.0, 1.0, pangolin::Attach::Pix(175), pangolin::Attach::Frac(0.5), -1024.0f/768.0f)
             .SetHandler(new pangolin::Handler3D(s_cam));
+    d_cam.SetAspect(-1024.0f/768.0f);
+
+    // Right view: dense point cloud (midpoint to right edge)
+    pangolin::View& d_cam_dense = pangolin::Display("dense_view")
+            .SetBounds(0.0, 1.0, pangolin::Attach::Frac(0.5), 1.0, -1024.0f/768.0f)
+            .SetHandler(new pangolin::Handler3D(s_cam_dense));
+    d_cam_dense.SetAspect(-1024.0f/768.0f);
 
     pangolin::OpenGlMatrix Twc, Twr;
     Twc.SetIdentity();
@@ -307,6 +322,7 @@ void Viewer::Run()
         }
 
 
+        // === Left view: Sparse map ===
         d_cam.Activate(s_cam);
         glClearColor(1.0f,1.0f,1.0f,1.0f);
         mpMapDrawer->DrawCurrentCamera(Twc);
@@ -314,9 +330,15 @@ void Viewer::Run()
             mpMapDrawer->DrawKeyFrames(menuShowKeyFrames,menuShowGraph, menuShowInertialGraph, menuShowOptLba);
         if(menuShowPoints)
             mpMapDrawer->DrawMapPoints();
-        // Dense point cloud (RGB-D mode)
-        if(mpSystem->GetPointCloudMapping())
+
+        // === Right view: Dense point cloud ===
+        if(hasDenseCloud)
+        {
+            d_cam_dense.Activate(s_cam_dense);
+            glClearColor(0.0f,0.0f,0.0f,1.0f);
+            mpMapDrawer->DrawCurrentCamera(Twc);
             mpMapDrawer->DrawDensePointCloud(mpSystem->GetPointCloudMapping()->getGlobalMap());
+        }
 
         pangolin::FinishFrame();
 
