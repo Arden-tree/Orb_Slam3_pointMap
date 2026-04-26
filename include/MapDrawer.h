@@ -30,6 +30,7 @@
 #include<pcl/point_cloud.h>
 
 #include<mutex>
+#include<vector>
 
 namespace ORB_SLAM3
 {
@@ -57,6 +58,9 @@ public:
 private:
 
     bool ParseViewerParamFile(cv::FileStorage &fSettings);
+
+    // Render buffer for dense point cloud (client-side vertex arrays)
+    std::vector<float> mDenseBuf;
 
     float mKeyFrameSize;
     float mKeyFrameLineWidth;

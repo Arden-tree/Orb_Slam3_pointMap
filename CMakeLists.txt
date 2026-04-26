@@ -40,7 +40,7 @@ MESSAGE(${OpenCV_VERSION})
 
 find_package(Eigen3 3.1.0 REQUIRED)
 find_package(Pangolin REQUIRED)
-find_package(PCL REQUIRED COMPONENTS common io)
+find_package(PCL REQUIRED COMPONENTS common io filters)
 find_package(realsense2)
 
 # Workaround: PCL transitive deps may not export cmake targets
@@ -160,6 +160,9 @@ if(realsense2_FOUND)
     add_executable(rgbd_realsense_D435i
             Examples/RGB-D/rgbd_realsense_D435i.cc)
     target_link_libraries(rgbd_realsense_D435i ${PROJECT_NAME})
+    add_executable(rgbd_realsense_D435i_rgbd
+            Examples/RGB-D/rgbd_realsense_D435i_rgbd.cc)
+    target_link_libraries(rgbd_realsense_D435i_rgbd ${PROJECT_NAME})
 endif()
 
 

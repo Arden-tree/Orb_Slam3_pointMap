@@ -44,6 +44,7 @@ private:
     void run(); // background processing loop
 
     double mResolution;
+    double mVoxelLeafSize; // voxel filter leaf size for rendering
     PointCloud::Ptr mGlobalMap;
     std::mutex mMapMutex;
 

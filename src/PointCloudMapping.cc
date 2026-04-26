@@ -10,12 +10,65 @@
 
 #include <iostream>
 #include <cmath>
+#include <unordered_map>
 
 namespace ORB_SLAM3
 {
 
+// Simple grid-hash voxel filter (replaces PCL VoxelGrid to avoid heap corruption)
+static PointCloud::Ptr voxelFilter(const PointCloud::Ptr& cloud, float leaf)
+{
+    PointCloud::Ptr out(new PointCloud());
+    if (!cloud || cloud->empty())
+        return out;
+
+    struct CellKey {
+        int cx, cy, cz;
+        bool operator==(const CellKey& o) const { return cx==o.cx && cy==o.cy && cz==o.cz; }
+    };
+    struct CellHash {
+        size_t operator()(const CellKey& k) const {
+            return ((size_t)k.cx * 73856093) ^ ((size_t)k.cy * 19349669) ^ ((size_t)k.cz * 83492791);
+        }
+    };
+
+    float inv = 1.0f / leaf;
+    std::unordered_map<CellKey, PointT, CellHash> grid;
+    grid.reserve(cloud->size() / 2);
+
+    for (const auto& p : cloud->points)
+    {
+        CellKey key{(int)std::floor(p.x * inv), (int)std::floor(p.y * inv), (int)std::floor(p.z * inv)};
+        auto it = grid.find(key);
+        if (it == grid.end())
+        {
+            grid.insert({key, p});
+        }
+        else
+        {
+            // Average color
+            auto& avg = it->second;
+            avg.x = (avg.x + p.x) * 0.5f;
+            avg.y = (avg.y + p.y) * 0.5f;
+            avg.z = (avg.z + p.z) * 0.5f;
+            avg.r = (avg.r + p.r) / 2;
+            avg.g = (avg.g + p.g) / 2;
+            avg.b = (avg.b + p.b) / 2;
+        }
+    }
+
+    out->points.reserve(grid.size());
+    for (const auto& kv : grid)
+        out->points.push_back(kv.second);
+
+    out->width = out->points.size();
+    out->height = 1;
+    out->is_dense = false;
+    return out;
+}
+
 PointCloudMapping::PointCloudMapping(double resolution)
-    : mResolution(resolution), mbShutDown(false)
+    : mResolution(resolution), mVoxelLeafSize(resolution * 2.0), mbShutDown(false)
 {
     mGlobalMap.reset(new PointCloud());
     mThread = std::make_shared<std::thread>(&PointCloudMapping::run, this);
@@ -57,7 +110,7 @@ void PointCloudMapping::insertKeyFrame(KeyFrame* kf, cv::Mat& color, cv::Mat& de
 PointCloud::Ptr PointCloudMapping::getGlobalMap()
 {
     std::unique_lock<std::mutex> lck(mMapMutex);
-    return mGlobalMap;
+    return PointCloud::Ptr(new PointCloud(*mGlobalMap));
 }
 
 PointCloud::Ptr PointCloudMapping::generatePointCloud(KeyFrame* kf, cv::Mat& color, cv::Mat& depth)
@@ -68,9 +121,9 @@ PointCloud::Ptr PointCloudMapping::generatePointCloud(KeyFrame* kf, cv::Mat& col
     Eigen::Matrix3d R = T.rotation();
     Eigen::Vector3d t = T.translation();
 
-    for (int m = 0; m < depth.rows; m += 2)
+    for (int m = 0; m < depth.rows; m += 4)
     {
-        for (int n = 0; n < depth.cols; n += 2)
+        for (int n = 0; n < depth.cols; n += 4)
         {
             float d = depth.ptr<float>(m)[n];
             if (d < 0.01f || d > 10.0f)
@@ -140,6 +193,13 @@ void PointCloudMapping::run()
         {
             std::unique_lock<std::mutex> lck(mMapMutex);
             *mGlobalMap += *cloud;
+
+            // Global voxel filter to cap total size
+            if (mGlobalMap->size() > 200000)
+            {
+                mGlobalMap = voxelFilter(mGlobalMap, mVoxelLeafSize);
+                std::cout << "[PointCloud] global voxel: " << mGlobalMap->size() << " points" << std::endl;
+            }
         }
     }
 }

@@ -180,14 +180,36 @@ void MapDrawer::DrawDensePointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr dense
     if (!denseCloud || denseCloud->empty())
         return;
 
-    glPointSize(2);
-    glBegin(GL_POINTS);
-    for (const auto& p : denseCloud->points)
+    // Deep copy to avoid data race with point cloud thread
+    pcl::PointCloud<pcl::PointXYZRGB> cloud = *denseCloud;
+    size_t n = cloud.size();
+    if (n == 0)
+        return;
+
+    // Pack interleaved [x, y, z, r, g, b] into client-side array
+    mDenseBuf.resize(n * 6);
+    for (size_t i = 0; i < n; i++)
     {
-        glColor3ub(p.r, p.g, p.b);
-        glVertex3f(p.x, p.y, p.z);
+        const auto& p = cloud.points[i];
+        mDenseBuf[i * 6 + 0] = p.x;
+        mDenseBuf[i * 6 + 1] = p.y;
+        mDenseBuf[i * 6 + 2] = p.z;
+        mDenseBuf[i * 6 + 3] = p.r / 255.0f;
+        mDenseBuf[i * 6 + 4] = p.g / 255.0f;
+        mDenseBuf[i * 6 + 5] = p.b / 255.0f;
     }
-    glEnd();
+
+    glPointSize(2);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_COLOR_ARRAY);
+
+    glVertexPointer(3, GL_FLOAT, 6 * sizeof(float), mDenseBuf.data());
+    glColorPointer(3, GL_FLOAT, 6 * sizeof(float), mDenseBuf.data() + 3);
+
+    glDrawArrays(GL_POINTS, 0, n);
+
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
 }
 
 void MapDrawer::DrawKeyFrames(const bool bDrawKF, const bool bDrawGraph, const bool bDrawInertialGraph, const bool bDrawOptLba)
